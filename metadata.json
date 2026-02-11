@@ -1,0 +1,7 @@
+{
+  "name": "Copy of NexusSupport AI",
+  "description": "An intelligent technical support ticketing system featuring an automated AI triage, administrative dashboard, and real-time status tracking.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
