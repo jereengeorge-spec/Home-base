@@ -1,6 +1,7 @@
 
 import { Ticket, TicketStatus, Urgency } from "../types";
 import { analyzeTicket } from "./geminiService";
+import { syncTicketToHubSpot, updateHubSpotTicketStatus } from "./hubspotService";
 
 const STORAGE_KEY = 'jereen_george_tickets';
 
@@ -31,6 +32,21 @@ export const createTicket = async (ticketData: Omit<Ticket, 'id' | 'status' | 'c
 
   tickets.unshift(newTicket);
   saveTickets(tickets);
+
+  // Sync to HubSpot asynchronously — don't block ticket creation
+  syncTicketToHubSpot(newTicket).then(({ contactId, ticketId }) => {
+    if (contactId || ticketId) {
+      const stored = getStoredTickets();
+      const idx = stored.findIndex(t => t.id === newTicket.id);
+      if (idx !== -1) {
+        stored[idx].hubspotContactId = contactId ?? undefined;
+        stored[idx].hubspotTicketId = ticketId ?? undefined;
+        stored[idx].hubspotSynced = !!(contactId && ticketId);
+        saveTickets(stored);
+      }
+    }
+  });
+
   return newTicket;
 };
 
@@ -46,6 +62,11 @@ export const updateTicketStatus = async (id: string, status: TicketStatus): Prom
   if (index !== -1) {
     tickets[index].status = status;
     saveTickets(tickets);
+
+    const hubspotTicketId = tickets[index].hubspotTicketId;
+    if (hubspotTicketId) {
+      updateHubSpotTicketStatus(hubspotTicketId, status);
+    }
   }
 };
 

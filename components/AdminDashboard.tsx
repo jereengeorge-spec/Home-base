@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { getTickets, updateTicketStatus } from '../services/ticketService';
 import { Ticket, TicketStatus, Urgency } from '../types';
+import { getHubSpotTicketUrl } from '../services/hubspotService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export const AdminDashboard: React.FC = () => {
@@ -126,11 +127,28 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                     <h4 className="font-semibold text-gray-900 truncate">{ticket.subject}</h4>
                     <p className="text-sm text-gray-500 truncate">{ticket.customerName}</p>
-                    <div className="mt-2 flex items-center text-xs text-gray-400">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {new Date(ticket.createdAt).toLocaleDateString()}
+                    <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
+                      <span className="flex items-center">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {new Date(ticket.createdAt).toLocaleDateString()}
+                      </span>
+                      {ticket.hubspotSynced ? (
+                        <span className="flex items-center text-orange-500 font-medium">
+                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                          </svg>
+                          HubSpot
+                        </span>
+                      ) : (
+                        <span className="flex items-center text-gray-300">
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01" />
+                          </svg>
+                          Syncing
+                        </span>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -146,15 +164,35 @@ export const AdminDashboard: React.FC = () => {
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">{selectedTicket.subject}</h2>
                     <p className="text-gray-500">{selectedTicket.customerName} &bull; {selectedTicket.email}</p>
+                    {selectedTicket.hubspotTicketId ? (
+                      <a
+                        href={getHubSpotTicketUrl(selectedTicket.hubspotTicketId)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center mt-1 text-xs text-orange-500 hover:text-orange-700 font-medium"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        View in HubSpot &rarr;
+                      </a>
+                    ) : (
+                      <span className="inline-flex items-center mt-1 text-xs text-gray-400">
+                        <svg className="w-3 h-3 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Syncing to HubSpot...
+                      </span>
+                    )}
                   </div>
                   <div className="flex space-x-2">
-                    <button 
+                    <button
                       onClick={() => handleStatusUpdate(selectedTicket.id, TicketStatus.IN_PROGRESS)}
                       className="px-3 py-1 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200"
                     >
                       Process
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleStatusUpdate(selectedTicket.id, TicketStatus.RESOLVED)}
                       className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-200"
                     >

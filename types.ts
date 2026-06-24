@@ -25,6 +25,9 @@ export interface Ticket {
   createdAt: string;
   aiSummary?: string;
   aiSuggestedFix?: string;
+  hubspotContactId?: string;
+  hubspotTicketId?: string;
+  hubspotSynced?: boolean;
 }
 
 export interface TicketStats {
