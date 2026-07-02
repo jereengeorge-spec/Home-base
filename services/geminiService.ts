@@ -1,40 +1,50 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Ticket, Urgency } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy init: constructing the client at module load crashes the whole app
+// when no API key is configured. AI triage is an enhancement, not a dependency —
+// a missing/failed key must never block a customer from submitting a request.
+let ai: GoogleGenAI | null = null;
+const getClient = (): GoogleGenAI | null => {
+  if (ai) return ai;
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return null;
+  ai = new GoogleGenAI({ apiKey });
+  return ai;
+};
 
 export const analyzeTicket = async (ticket: Partial<Ticket>) => {
-  const model = "gemini-3-flash-preview";
-  
-  const response = await ai.models.generateContent({
-    model,
-    contents: `You are the AI triage agent for Jereen George. 
-    Analyze this ticket for Jereen George:
-    Subject: ${ticket.subject}
-    Description: ${ticket.description}
-    
-    Please provide:
-    1. A concise summary (max 20 words).
-    2. A suggested category (e.g., Billing, Software Bug, Hardware, Account Access).
-    3. A brief suggested technical fix or next step for the Jereen George team.`,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          summary: { type: Type.STRING },
-          category: { type: Type.STRING },
-          suggestedFix: { type: Type.STRING }
-        },
-        required: ["summary", "category", "suggestedFix"]
-      }
-    }
-  });
+  const client = getClient();
+  if (!client) return null;
 
   try {
+    const response = await client.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `You are George, TechButler's AI triage agent.
+      Analyze this support request:
+      Subject: ${ticket.subject}
+      Description: ${ticket.description}
+
+      Please provide:
+      1. A concise summary (max 20 words).
+      2. A suggested category (e.g., Email, Video Calls, Passwords, Device Setup, Wifi, Printing).
+      3. A brief suggested fix or next step for the TechButler team, written plainly.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            summary: { type: Type.STRING },
+            category: { type: Type.STRING },
+            suggestedFix: { type: Type.STRING }
+          },
+          required: ["summary", "category", "suggestedFix"]
+        }
+      }
+    });
     return JSON.parse(response.text);
   } catch (error) {
-    console.error("Failed to parse Gemini response:", error);
+    console.error("AI triage unavailable, ticket will proceed without analysis:", error);
     return null;
   }
 };
