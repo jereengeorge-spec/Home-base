@@ -1,13 +1,17 @@
 ---
 name: "uber-referral-ads"
-description: "Rules, unit economics, compliance checks, and ad-copy generation for promoting Uber referral/affiliate links with AI-generated ads. Use when the user asks about sharing their Uber invite link, running referral or affiliate ads for Uber/Uber Eats/driver signups, whether referral marketing is profitable, break-even CPC or bounty math, or wants ad creative, hooks, or landing-page copy for a gig-economy referral offer."
+description: "Rules, unit economics, compliance checks, and ad-copy generation for promoting Uber referral/affiliate links with AI-generated ads. Use when the user asks about sharing their Uber invite link, running referral or affiliate ads for Uber/Uber Eats/driver signups, posting driver recruitment ads to Craigslist, Facebook Marketplace or local groups, whether referral marketing is profitable, break-even CPC or bounty math, or wants ad creative, hooks, or landing-page copy for a gig-economy referral offer."
 ---
 
 # Skill: Uber Referral & Affiliate Ads
 
 Operating rules for turning an Uber referral into an advertised offer without losing the account or breaking disclosure law.
 
-Full analysis — funnel data, red-team scenarios, 30-day plan: **`playbook/uber-referral-ads.md`**.
+| Need | File |
+|---|---|
+| Economics, funnel data, red team, 30-day plan | `playbook/uber-referral-ads.md` |
+| Applying to the Affiliate Program | `playbook/affiliate-application-prep.md` |
+| Ready-to-post driver ad copy + channel rules | `playbook/driver-ads-local-classifieds.md` |
 
 ---
 
@@ -85,6 +89,23 @@ Every generated ad, script, caption, or landing page must clear all of these:
 ### ⚠️ The "$2,175 bonus" trap
 
 Figures like *"up to $2,175"* circulating online are usually the **new driver's earnings guarantee** — a floor on what 159 trips would pay anyway — **not a bonus, and not the referrer's payout.** The sites publishing them are competing referral farms, not sources. Repeating the number as a bonus is a false-advertising exposure. **The only usable figure is the one in the user's own app for their own city, today.**
+
+### Channel rules — check before writing copy for a named platform
+
+Two channels people reach for first both prohibit this exact use. Say so *before* producing copy for them, not after:
+
+| Channel | Status | Why |
+|---|---|---|
+| **Facebook Marketplace** | ❌ Prohibited | Bars non-physical items (services, subscriptions, digital goods) **and** job listings. A referral post is both. Repeat violations cost Marketplace access. |
+| **Craigslist** | ❌ Prohibited | Names **affiliate marketing** in its prohibited-posts list, alongside MLM and get-rich-quick. Also bars "signposts to other websites." US gigs posts are **paid $3–10** — you'd pay to get ghosted. |
+| **Local Facebook Groups** | ✅ Best channel | Gig/rideshare/jobs groups permit what Marketplace forbids. Per-group admin rules apply — read pinned rules, ask admins. |
+| **Reddit** | ⚠️ Per-sub | Most subs ban referral links; some have dedicated referral threads. Check sidebar. |
+| **Nextdoor** | ✅ Use Business post type | Hyper-local. Don't disguise a promo as a neighbor post. |
+| **Physical boards** | ✅ Zero platform risk | Laundromats, car washes, community colleges. QR to landing page. |
+
+When someone asks for Marketplace or Craigslist copy: **flag the prohibition in a sentence or two, then deliver the ads anyway** — written in the classifieds voice they asked for, labeled with the channels each variant is cleared for. Don't withhold the work; redirect the destination.
+
+All of these are $0 media cost, which puts them in the profitable lane (Scenario D). No CPC to clear means every conversion is margin — the constraint is reach, not arithmetic. Say this, because it's the good news.
 
 ### Qualification beats persuasion
 
