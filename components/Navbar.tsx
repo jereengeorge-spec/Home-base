@@ -1,9 +1,11 @@
 
 import React from 'react';
 
+export type View = 'customer' | 'admin' | 'status' | 'economics';
+
 interface NavbarProps {
-  view: 'customer' | 'admin' | 'status';
-  setView: (view: 'customer' | 'admin' | 'status') => void;
+  view: View;
+  setView: (view: View) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ view, setView }) => {
@@ -36,6 +38,12 @@ export const Navbar: React.FC<NavbarProps> = ({ view, setView }) => {
               className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${view === 'status' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Track Status
+            </button>
+            <button
+              onClick={() => setView('economics')}
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${view === 'economics' ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              Economics
             </button>
             <button
               onClick={() => setView('admin')}

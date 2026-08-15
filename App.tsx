@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Navbar } from './components/Navbar';
+import { Navbar, View } from './components/Navbar';
 import { TicketForm } from './components/TicketForm';
 import { AdminDashboard } from './components/AdminDashboard';
 import { TicketStatusPage } from './components/TicketStatus';
+import { PricingModel } from './components/PricingModel';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'customer' | 'admin' | 'status'>('customer');
+  const [view, setView] = useState<View>('customer');
   const [successId, setSuccessId] = useState<string | null>(null);
 
   const handleSuccess = (id: string) => {
@@ -33,6 +34,7 @@ const App: React.FC = () => {
         {view === 'customer' && <TicketForm onSuccess={handleSuccess} />}
         {view === 'admin' && <AdminDashboard />}
         {view === 'status' && <TicketStatusPage />}
+        {view === 'economics' && <PricingModel />}
       </main>
 
       <footer className="bg-white border-t border-gray-200 py-8">
