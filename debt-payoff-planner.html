@@ -345,6 +345,26 @@ svg { display: block; width: 100%; }
 .play h3 { font-size: 1rem; }
 .play p { font-size: 0.88rem; color: var(--ink-2); }
 
+/* ── Handoff ────────────────────────────────────────────────────────────── */
+#payload {
+  width: 100%;
+  min-height: 230px;
+  resize: vertical;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  tab-size: 2;
+}
+.copy-state { font-size: 0.85rem; color: var(--green); }
+.copy-state.fail { color: var(--red); }
+.copy-state:empty { display: none; }
+.btn-go { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 600; }
+.btn-go:hover { opacity: 0.88; border-color: var(--ink); }
+
 footer { border-top: 1px solid var(--rule); padding-top: 20px; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -379,7 +399,7 @@ footer { border-top: 1px solid var(--rule); padding-top: 20px; }
     </div>
     <div class="banner">
       <span aria-hidden="true">✎</span>
-      <span><strong>These are placeholder figures.</strong> Overwrite each cell with your own — the balance and APR from your latest statement, and the minimum payment your lender requires. Add or delete rows as needed.</span>
+      <span><strong>These are placeholder figures.</strong> Overwrite each cell with your own — the balance and APR from your latest statement, and the minimum payment your lender requires. Add or delete rows as needed. When you're done, Step nine hands your figures back to Claude for analysis.</span>
     </div>
     <div class="card">
       <div class="tablescroll">
@@ -628,6 +648,25 @@ footer { border-top: 1px solid var(--rule); padding-top: 20px; }
     </div>
   </section>
 
+  <!-- ── HANDOFF ───────────────────────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Step nine</p>
+      <h2>Hand it back to Claude</h2>
+      <p class="note">Nothing you type here leaves your browser on its own — this page has no way to send it anywhere. To get analysis on your real figures, copy this snapshot and paste it into the chat. It carries your ledger, the computed plan, and your cash-flow settings.</p>
+    </div>
+    <div class="card">
+      <label for="payload" class="eyebrow" style="display:block;margin-bottom:10px">Snapshot — review before sending</label>
+      <textarea id="payload" readonly spellcheck="false" aria-label="Plan snapshot to copy"></textarea>
+      <div class="btn-row" style="margin-top:14px">
+        <button type="button" id="copy" class="btn-go">Copy snapshot</button>
+        <button type="button" id="download">Download as .md</button>
+        <span class="copy-state" id="copy-state" role="status"></span>
+      </div>
+      <p class="note" style="margin-top:14px">Names are yours to edit — if you'd rather not share which lender is which, rename the rows in the ledger to "Card A", "Card B" and so on before copying. The maths only uses the numbers.</p>
+    </div>
+  </section>
+
   <footer>
     <p class="note">This is a calculator, not personalised financial advice. Figures are estimates: it assumes fixed APRs, fixed minimum payments, payments applied at month end after interest accrues, and no new borrowing. Check any promotional-rate expiry dates and prepayment penalties against your own loan documents before committing to a plan.</p>
   </footer>
@@ -651,7 +690,7 @@ footer { border-top: 1px solid var(--rule); padding-top: 20px; }
   let debts = [];
   let budget = 1300;
   let schedExpanded = false;
-  let lastPlan = null;
+  let lastPlan = null, lastBase = null, lastTotals = null;
   let calMonth = 1;                                  // 1-based index into plan.rows
   let cash = { start: 0, paydays: [1, 15], paycheck: 0 };
 
@@ -804,6 +843,16 @@ footer { border-top: 1px solid var(--rule); padding-top: 20px; }
     renderLadder(totalMin, effBudget);
     renderSched(plan);
     drawChart(plan, base);
+    lastBase = base;
+    lastTotals = { totalBal, totalMin, wAvg, effBudget };
+    renderHandoff(plan, base, lastTotals);
+  }
+
+  // cash-flow settings feed the snapshot too, but don't change the payoff maths
+  function refreshCash() {
+    if (!lastPlan) return;
+    renderCalendar(lastPlan);
+    renderHandoff(lastPlan, lastBase, lastTotals);
   }
 
   function clearOutputs() {
@@ -812,6 +861,7 @@ footer { border-top: 1px solid var(--rule); padding-top: 20px; }
     $("steps").innerHTML = ""; $("ladder").innerHTML = ""; $("sched").innerHTML = "";
     $("chart").innerHTML = ""; $("cal-grid").innerHTML = ""; $("cash").innerHTML = "";
     $("cal-sum").innerHTML = ""; $("cash-note").textContent = ""; $("cal-title").textContent = "—";
+    $("payload").value = "";
   }
 
   function renderSteps(plan) {
@@ -866,6 +916,89 @@ footer { border-top: 1px solid var(--rule); padding-top: 20px; }
       ? "Show first year only"
       : "Show all " + plan.rows.length + " months";
     $("toggle-sched").style.display = plan.rows.length > 12 ? "" : "none";
+  }
+
+  /* ── handoff snapshot ───────────────────────────────────────────── */
+  function buildSnapshot(plan, base, totals) {
+    const { totalBal, totalMin, wAvg, effBudget } = totals;
+    const order = plan.debts.slice().sort((a, b) => (b.apr - a.apr) || (a.bal - b.bal));
+    const stamp = new Date().toISOString().slice(0, 10);
+
+    const L = [];
+    L.push("# Debt payoff snapshot — " + stamp);
+    L.push("");
+    L.push("## Ledger");
+    L.push("| Debt | Balance | APR | Minimum | Due day |");
+    L.push("|---|---|---|---|---|");
+    debts.forEach(d => L.push("| " + d.name + " | " + money(d.balance) + " | " + d.apr.toFixed(2) +
+      "% | " + money(d.min) + " | " + ordinal(d.due || 1) + " |"));
+    L.push("");
+    L.push("- Total balance: " + money(totalBal));
+    L.push("- Weighted average APR: " + wAvg.toFixed(2) + "%");
+    L.push("- Minimums: " + money(totalMin) + "/mo");
+    L.push("- Monthly budget: " + money(effBudget) + " (extra " + money(Math.max(0, effBudget - totalMin)) + "/mo)");
+    if (budget < totalMin) L.push("- NOTE: entered budget " + money(budget) + " is below the minimums; plan computed at " + money(totalMin) + ".");
+    L.push("");
+    L.push("## Plan — avalanche (highest APR first)");
+    L.push("- Debt-free: " + (plan.capped ? "not within 50 years" : labelFor(plan.months) + " (" + plan.months + " months)"));
+    L.push("- Total interest: " + money(plan.totalInterest));
+    L.push("- Total repaid: " + money(totalBal + plan.totalInterest));
+    L.push("- Vs minimums only (" + (base.capped ? "50+ yrs" : base.months + " months") + ", " +
+      money(base.totalInterest) + " interest): saves " + money(Math.max(0, base.totalInterest - plan.totalInterest)) +
+      (base.capped ? "" : " and " + Math.max(0, base.months - plan.months) + " months"));
+    L.push("");
+    L.push("### Payoff order");
+    order.forEach((d, i) => L.push((i + 1) + ". " + d.name + " — " + d.apr.toFixed(2) + "% APR, " +
+      money(debts[d.id] ? debts[d.id].balance : 0) + " balance, " +
+      money(d.interest) + " lifetime interest, cleared " +
+      (d.payoffMonth ? labelFor(d.payoffMonth) : "beyond 50 yrs")));
+    L.push("");
+    L.push("## Cash flow");
+    const { ev } = monthEvents(plan, 1);
+    const outs = ev.filter(e => e.kind === "out");
+    L.push("- Month 1 due: " + money(outs.reduce((s, e) => s + e.amt, 0)) +
+      (outs.length ? ", all of it needed by the " + ordinal(outs[outs.length - 1].day) : ""));
+    L.push("- Starting balance: " + money(cash.start));
+    L.push("- Paydays: " + cash.paydays.map(ordinal).join(", ") +
+      (cash.paycheck > 0 ? " · " + money(cash.paycheck) + " per payday" : " · take-home not entered"));
+    L.push("");
+    L.push("## Machine-readable");
+    L.push("```json");
+    L.push(JSON.stringify({
+      captured: stamp,
+      debts: debts.map(d => ({ name: d.name, balance: d.balance, apr: d.apr, min: d.min, due: d.due || 1 })),
+      budget: effBudget,
+      cash: { start: cash.start, paydays: cash.paydays, paycheck: cash.paycheck },
+      result: {
+        months: plan.capped ? null : plan.months,
+        totalInterest: +plan.totalInterest.toFixed(2),
+        baselineMonths: base.capped ? null : base.months,
+        baselineInterest: +base.totalInterest.toFixed(2)
+      }
+    }, null, 1));
+    L.push("```");
+    return L.join("\n");
+  }
+
+  function renderHandoff(plan, base, totals) {
+    $("payload").value = buildSnapshot(plan, base, totals);
+  }
+
+  // `claude` only exists when the page is opened as a published Artifact;
+  // as a plain local file it is absent and the save button stays hidden.
+  async function getDownloads() {
+    try {
+      if (typeof claude === "undefined" || !claude || typeof claude.use !== "function") return null;
+      return await claude.use("downloads");
+    } catch (e) { return null; }
+  }
+
+  function flash(msg, ok) {
+    const el = $("copy-state");
+    el.textContent = msg;
+    el.className = "copy-state" + (ok ? "" : " fail");
+    clearTimeout(flash.t);
+    flash.t = setTimeout(() => { el.textContent = ""; }, 4000);
   }
 
   /* ── payment calendar ───────────────────────────────────────────── */
@@ -1116,23 +1249,53 @@ footer { border-top: 1px solid var(--rule); padding-top: 20px; }
 
   $("startbal").addEventListener("input", e => {
     cash.start = Math.max(0, +e.target.value || 0);
-    save(); if (lastPlan) renderCalendar(lastPlan);
+    save(); refreshCash();
   });
   $("paycheck").addEventListener("input", e => {
     cash.paycheck = Math.max(0, +e.target.value || 0);
-    save(); if (lastPlan) renderCalendar(lastPlan);
+    save(); refreshCash();
   });
   $("paydays").addEventListener("input", e => {
     const days = e.target.value.split(",")
       .map(s => Math.round(parseFloat(s)))
       .filter(n => Number.isFinite(n) && n >= 1 && n <= 31);
     cash.paydays = days.length ? days : [1];
-    save(); if (lastPlan) renderCalendar(lastPlan);
+    save(); refreshCash();
   });
   $("toggle-sched").addEventListener("click", () => {
     schedExpanded = !schedExpanded;
     if (lastPlan) renderSched(lastPlan);
   });
+
+  $("copy").addEventListener("click", async () => {
+    const text = $("payload").value;
+    if (!text) return flash("Nothing to copy — add a debt first.", false);
+    try {
+      await navigator.clipboard.writeText(text);
+      flash("Copied. Paste it into the chat.", true);
+    } catch (e) {
+      // clipboard permission is commonly withheld in a sandboxed frame
+      const ta = $("payload");
+      ta.focus(); ta.select();
+      flash("Selected — press " + (/Mac|iP(hone|ad)/.test(navigator.platform || "") ? "⌘C" : "Ctrl+C") + " to copy.", true);
+    }
+  });
+
+  $("download").addEventListener("click", async () => {
+    const dl = await getDownloads();
+    if (!dl) return flash("Saving isn't available here — use Copy instead.", false);
+    try {
+      await dl.save({ filename: "debt-payoff-snapshot.md", data: $("payload").value });
+      flash("Saved.", true);
+    } catch (err) {
+      const code = err && err.code;
+      if (code === "declined") return;                       // viewer said no; never retry
+      if (code === "rate_limited") return flash("Too many prompts — try again in a moment.", false);
+      flash("Couldn't save. Use Copy instead.", false);
+    }
+  });
+
+  getDownloads().then(dl => { if (!dl) $("download").style.display = "none"; });
 
   let rt;
   window.addEventListener("resize", () => {
