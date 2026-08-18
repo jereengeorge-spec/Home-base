@@ -1,0 +1,1389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Shortest Road Out</title>
+<style>
+/* ── Tokens ─────────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+  --paper:        #EBEEEC;
+  --card:         #FAFBFB;
+  --card-sunk:    #F1F4F2;
+  --ink:          #161A18;
+  --ink-2:        #414B47;
+  --ink-3:        #6B7672;
+  --rule:         #D5DAD7;
+  --rule-soft:    #E2E6E4;
+  --red:          #B3372C;
+  --red-ink:      #93291F;
+  --red-wash:     #F6E7E4;
+  --green:        #12a06b;
+  --green-wash:   #E1F1EA;
+  --focus:        #1a6fd4;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper:      #101413;
+    --card:       #1B2022;
+    --card-sunk:  #161B1C;
+    --ink:        #E9ECEA;
+    --ink-2:      #B7C0BC;
+    --ink-3:      #8B9591;
+    --rule:       #2C3432;
+    --rule-soft:  #242B2A;
+    --red:        #bf4232;
+    --red-ink:    #e58573;
+    --red-wash:   #2A1B18;
+    --green:      #1cad7a;
+    --green-wash: #12251F;
+    --focus:      #6aa9f5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper:      #101413;
+  --card:       #1B2022;
+  --card-sunk:  #161B1C;
+  --ink:        #E9ECEA;
+  --ink-2:      #B7C0BC;
+  --ink-3:      #8B9591;
+  --rule:       #2C3432;
+  --rule-soft:  #242B2A;
+  --red:        #bf4232;
+  --red-ink:    #e58573;
+  --red-wash:   #2A1B18;
+  --green:      #1cad7a;
+  --green-wash: #12251F;
+  --focus:      #6aa9f5;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 40px 20px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* ── Type ───────────────────────────────────────────────────────────────── */
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(2rem, 5vw, 2.9rem); line-height: 1.1; }
+h2 { font-size: 1.45rem; line-height: 1.2; }
+h3 { font-size: 1.05rem; line-height: 1.3; }
+p { margin: 0; }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.lede { color: var(--ink-2); max-width: 62ch; font-size: 1.05rem; }
+.note { color: var(--ink-3); font-size: 0.85rem; max-width: 70ch; }
+
+/* ── Structure ──────────────────────────────────────────────────────────── */
+header.masthead {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 32px;
+  border-bottom: 2px solid var(--ink);
+}
+
+section { display: flex; flex-direction: column; gap: 16px; }
+.sec-head { display: flex; flex-direction: column; gap: 4px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 22px;
+}
+
+/* ── Ledger (inputs) ────────────────────────────────────────────────────── */
+.banner {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--card-sunk);
+  border-left: 3px solid var(--ink-3);
+  padding: 12px 16px;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  border-radius: 0 3px 3px 0;
+}
+
+/* position:relative keeps absolutely-positioned descendants (.sr) from
+   escaping the scroll container and widening the page */
+.tablescroll { overflow-x: auto; position: relative; }
+
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+thead th {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 400;
+  text-align: right;
+  padding: 0 10px 8px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--rule);
+}
+thead th:first-child { text-align: left; }
+tbody td { padding: 6px 10px; border-bottom: 1px solid var(--rule-soft); text-align: right; }
+tbody td:first-child { text-align: left; }
+tbody tr:last-child td { border-bottom: none; }
+tfoot td {
+  padding: 10px;
+  border-top: 2px solid var(--ink);
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+}
+tfoot td:first-child {
+  text-align: left;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+input[type="text"], input[type="number"] {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--card-sunk);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 5px 8px;
+  width: 100%;
+  text-align: right;
+}
+input[type="text"] { text-align: left; font-family: var(--sans); }
+input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; border-color: transparent; }
+.c-name { min-width: 190px; }
+.c-num  { width: 118px; }
+.c-day  { width: 82px; }
+.c-act  { width: 36px; }
+
+button {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--ink);
+  background: var(--card-sunk);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--ink-3); }
+button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.btn-x {
+  padding: 3px 8px;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  line-height: 1;
+  background: transparent;
+  border-color: transparent;
+}
+.btn-x:hover { color: var(--red); border-color: var(--rule); }
+
+.budget {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+  align-items: flex-end;
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid var(--rule);
+}
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.field input { width: 150px; }
+.field .hint { font-size: 0.78rem; color: var(--ink-3); }
+
+.alert {
+  background: var(--red-wash);
+  border-left: 3px solid var(--red);
+  color: var(--ink);
+  padding: 12px 16px;
+  font-size: 0.88rem;
+  border-radius: 0 3px 3px 0;
+}
+.alert:empty { display: none; }
+
+/* ── Verdict tiles ──────────────────────────────────────────────────────── */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+.tile { background: var(--card); padding: 20px 22px; display: flex; flex-direction: column; gap: 6px; }
+.tile .k { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.tile .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 1.85rem; line-height: 1.05; letter-spacing: -0.02em; }
+.tile .s { font-size: 0.82rem; color: var(--ink-3); }
+.tile.free { background: var(--green-wash); }
+.tile.free .v { color: var(--green); }
+.tile.cost .v { color: var(--red); }
+
+/* ── Chart ──────────────────────────────────────────────────────────────── */
+.chartwrap { position: relative; }
+.legend { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 12px; }
+.legend span { display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--ink-2); }
+.swatch { width: 22px; height: 3px; border-radius: 2px; flex: none; }
+.swatch.dash { background: repeating-linear-gradient(90deg, var(--red) 0 6px, transparent 6px 10px); }
+svg { display: block; width: 100%; }
+.tip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 8px 11px;
+  font-size: 0.8rem;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.13);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.1s linear;
+  z-index: 4;
+}
+.tip.on { opacity: 1; }
+.tip .t-m { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.tip .t-r { display: flex; justify-content: space-between; gap: 14px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ── Order of attack ────────────────────────────────────────────────────── */
+.steps { display: flex; flex-direction: column; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+.step { background: var(--card); padding: 16px 20px; display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 16px; align-items: baseline; }
+.step .rank { font-family: var(--mono); font-size: 1.1rem; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.step .nm { font-family: var(--serif); font-size: 1.1rem; }
+.step .when { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.95rem; color: var(--green); text-align: right; white-space: nowrap; }
+.step .meta { grid-column: 2 / -1; font-size: 0.85rem; color: var(--ink-3); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.rate-pill {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--red-wash);
+  color: var(--red-ink);
+  margin-left: 8px;
+  vertical-align: 1px;
+}
+
+/* ── Schedule ───────────────────────────────────────────────────────────── */
+.sched td, .sched th { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.sched td:first-child, .sched td.focus-cell { font-family: var(--sans); }
+.sched tr.milestone td { background: var(--green-wash); }
+.sched .clear { color: var(--green); font-size: 0.8rem; }
+
+/* ── Payment calendar ───────────────────────────────────────────────────── */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 18px; }
+.cal-nav { display: flex; align-items: center; gap: 8px; }
+.cal-title { font-family: var(--serif); font-size: 1.15rem; min-width: 132px; text-align: center; }
+.cal-nav button { padding: 5px 12px; font-family: var(--mono); }
+.cal-nav button[disabled] { opacity: 0.35; cursor: default; }
+.cal-sum { display: flex; gap: 22px; flex-wrap: wrap; font-size: 0.82rem; color: var(--ink-3); }
+.cal-sum b { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; display: block; font-size: 1rem; }
+.cal-sum .warn { color: var(--red); }
+
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; min-width: 560px; }
+.cal-dow { background: var(--card-sunk); padding: 7px 4px; text-align: center; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
+.cal-cell { background: var(--card); min-height: 78px; padding: 5px 5px 7px; display: flex; flex-direction: column; gap: 3px; }
+.cal-cell.blank { background: var(--card-sunk); }
+.cal-day { font-family: var(--mono); font-size: 0.7rem; color: var(--ink-3); }
+.cal-cell.due .cal-day { color: var(--ink); font-weight: 600; }
+.chip {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+  font-size: 0.63rem; line-height: 1.35; border-radius: 3px; padding: 2px 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chip.out { background: var(--red-wash); color: var(--red-ink); }
+.chip.in  { background: var(--green-wash); color: var(--green); }
+
+.cash td, .cash th { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.cash td.what { font-family: var(--sans); text-align: left; }
+.cash th.what { text-align: left; }
+.cash tr.short td { background: var(--red-wash); }
+.cash .neg { color: var(--red); }
+.cashflow-inputs { display: flex; flex-wrap: wrap; gap: 16px 26px; align-items: flex-end; padding-top: 18px; margin-top: 20px; border-top: 1px solid var(--rule); }
+.cashflow-inputs .field input { width: 128px; }
+
+/* ── Extra-payment ladder ───────────────────────────────────────────────── */
+.ladder td, .ladder th { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.ladder tr.current td { background: var(--card-sunk); font-weight: 600; }
+.ladder .save { color: var(--green); }
+
+/* ── Playbook ───────────────────────────────────────────────────────────── */
+.plays { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+.play { display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 2px solid var(--ink); }
+.play h3 { font-size: 1rem; }
+.play p { font-size: 0.88rem; color: var(--ink-2); }
+
+/* ── Handoff ────────────────────────────────────────────────────────────── */
+#payload {
+  width: 100%;
+  min-height: 230px;
+  resize: vertical;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  tab-size: 2;
+}
+.copy-state { font-size: 0.85rem; color: var(--green); }
+.copy-state.fail { color: var(--red); }
+.copy-state:empty { display: none; }
+.btn-go { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 600; }
+.btn-go:hover { opacity: 0.88; border-color: var(--ink); }
+
+footer { border-top: 1px solid var(--rule); padding-top: 20px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+@media print {
+  body { background: #fff; }
+  .btn-row, .tip { display: none; }
+  .card { break-inside: avoid; }
+}
+/* The ledger is the one table people actually type into, and on a phone a
+   six-column grid is unusable. Below 700px each debt becomes its own stacked
+   card with labelled fields, so every input is thumb-width and nothing scrolls
+   sideways. */
+@media (max-width: 700px) {
+  .ledger-table thead { display: none; }
+  .ledger-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 14px;
+    padding: 16px 34px 18px 0;
+    position: relative;
+    border-bottom: 1px solid var(--rule);
+  }
+  .ledger-table tbody td { display: block; padding: 0; border: none; text-align: left; }
+  .ledger-table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 5px;
+  }
+  .ledger-table .cell-name { grid-column: 1 / -1; }
+  .ledger-table .cell-name .c-name { min-width: 0; font-size: 1rem; padding: 8px 10px; }
+  .ledger-table .cell-act { position: absolute; top: 14px; right: 0; width: auto; }
+  .ledger-table tbody input { width: 100%; padding: 9px 10px; font-size: 1rem; }
+
+  .ledger-table tfoot tr {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .ledger-table tfoot td { border-top: none; padding: 0; text-align: left; }
+  .ledger-table tfoot td::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+  }
+  .ledger-table tfoot .tot-lbl, .ledger-table tfoot .tot-pad { display: none; }
+  .ledger-table tfoot { border-top: 2px solid var(--ink); display: table-row-group; }
+  .ledger-table tfoot tr { padding-top: 14px; }
+}
+
+@media (max-width: 640px) {
+  .tile .v { font-size: 1.5rem; }
+  .step { grid-template-columns: 26px 1fr; }
+  .step .when { grid-column: 1 / -1; text-align: left; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Debt payoff plan · avalanche method</p>
+    <h1>The shortest road out</h1>
+    <p class="lede">Every spare dollar goes to the highest interest rate first. That single rule is the mathematically fastest and cheapest way to clear a set of debts. Put your real numbers in the ledger below and the whole plan recalculates.</p>
+  </header>
+
+  <!-- ── LEDGER ────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Step one</p>
+      <h2>Your ledger</h2>
+    </div>
+    <div class="banner">
+      <span aria-hidden="true">✎</span>
+      <span><strong>These are placeholder figures.</strong> Overwrite each cell with your own — the balance and APR from your latest statement, and the minimum payment your lender requires. Add or delete rows as needed. When you're done, Step nine hands your figures back to Claude for analysis.</span>
+    </div>
+    <div class="card">
+      <div class="tablescroll">
+        <table class="ledger-table">
+          <thead>
+            <tr>
+              <th scope="col" class="c-name">Debt</th>
+              <th scope="col" class="c-num">Balance</th>
+              <th scope="col" class="c-num">APR&nbsp;%</th>
+              <th scope="col" class="c-num">Minimum</th>
+              <th scope="col" class="c-day">Due day</th>
+              <th scope="col" class="c-act"><span class="sr">Remove</span></th>
+            </tr>
+          </thead>
+          <tbody id="ledger"></tbody>
+          <tfoot>
+            <tr>
+              <td class="tot-lbl">Totals</td>
+              <td id="t-bal" data-label="Total balance"></td>
+              <td id="t-apr" data-label="Avg APR"></td>
+              <td id="t-min" data-label="Minimums"></td>
+              <td class="tot-pad"></td>
+              <td class="tot-pad"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="budget">
+        <div class="field">
+          <label for="budget">Monthly payment budget</label>
+          <input type="number" id="budget" min="0" step="25" value="1300">
+          <span class="hint" id="extra-hint"></span>
+        </div>
+        <div class="btn-row">
+          <button type="button" id="add">+ Add a debt</button>
+          <button type="button" id="reset">Reset to example</button>
+        </div>
+      </div>
+      <div class="alert" id="alert" role="status"></div>
+    </div>
+    <p class="note">Minimums are treated as fixed dollar amounts. Real card minimums shrink as the balance falls, which makes the minimum-only path even slower than shown here — so the comparison below is conservative in your favour.</p>
+  </section>
+
+  <!-- ── VERDICT ───────────────────────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Step two</p>
+      <h2>Where this lands you</h2>
+    </div>
+    <div class="tiles">
+      <div class="tile free">
+        <span class="k">Debt-free</span>
+        <span class="v num" id="v-date">—</span>
+        <span class="s" id="v-months">—</span>
+      </div>
+      <div class="tile cost">
+        <span class="k">Interest you'll pay</span>
+        <span class="v num" id="v-interest">—</span>
+        <span class="s">on top of the principal</span>
+      </div>
+      <div class="tile">
+        <span class="k">Saved vs. minimums only</span>
+        <span class="v num" id="v-saved">—</span>
+        <span class="s" id="v-faster">—</span>
+      </div>
+      <div class="tile">
+        <span class="k">Total you'll repay</span>
+        <span class="v num" id="v-total">—</span>
+        <span class="s" id="v-principal">—</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CHART ─────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Step three</p>
+      <h2>The balance curve</h2>
+      <p class="note">Total balance across every debt, month by month. The plan line bends downward as each cleared debt frees its payment into the next one.</p>
+    </div>
+    <div class="card">
+      <div class="legend">
+        <span><i class="swatch dash"></i>Minimum payments only</span>
+        <span><i class="swatch" style="background:var(--green)"></i>Your avalanche plan</span>
+      </div>
+      <div class="chartwrap" id="chartwrap">
+        <div id="chart"></div>
+        <div class="tip" id="tip" aria-hidden="true"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ORDER ─────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Step four</p>
+      <h2>Order of attack</h2>
+      <p class="note">Pay the minimum on everything, always. Then send every remaining dollar to the debt at the top of this list until it is gone — then the next one, at the now-larger payment.</p>
+    </div>
+    <div class="steps" id="steps"></div>
+  </section>
+
+  <!-- ── CALENDAR ──────────────────────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Step five</p>
+      <h2>When the money has to be there</h2>
+      <p class="note">Payment amounts change month to month as debts clear and the extra rolls forward, so this calendar is built from the actual schedule — not just the minimums. Set each debt's due day in the ledger above.</p>
+    </div>
+    <div class="card">
+      <div class="cal-head">
+        <div class="cal-nav">
+          <button type="button" id="cal-prev" aria-label="Previous month">←</button>
+          <span class="cal-title" id="cal-title">—</span>
+          <button type="button" id="cal-next" aria-label="Next month">→</button>
+        </div>
+        <div class="cal-sum" id="cal-sum"></div>
+      </div>
+      <div class="tablescroll">
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+
+      <div class="cashflow-inputs">
+        <div class="field">
+          <label for="startbal">Starting balance</label>
+          <input type="number" id="startbal" min="0" step="50" value="0">
+          <span class="hint">in the account on the 1st</span>
+        </div>
+        <div class="field">
+          <label for="paydays">Paydays</label>
+          <input type="text" id="paydays" value="1, 15">
+          <span class="hint">days of the month, comma-separated</span>
+        </div>
+        <div class="field">
+          <label for="paycheck">Amount per payday</label>
+          <input type="number" id="paycheck" min="0" step="50" value="0">
+          <span class="hint">leave at 0 to skip the balance check</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:12px">Cash checkpoints — <span id="cash-month">this month</span></h3>
+      <div class="tablescroll">
+        <table class="cash">
+          <thead>
+            <tr>
+              <th scope="col">Day</th>
+              <th scope="col" class="what">What happens</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Paid so far</th>
+              <th scope="col" id="th-bal">Balance after</th>
+            </tr>
+          </thead>
+          <tbody id="cash"></tbody>
+        </table>
+      </div>
+      <p class="note" id="cash-note" style="margin-top:14px"></p>
+    </div>
+  </section>
+
+  <!-- ── LADDER ────────────────────────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Step six</p>
+      <h2>What another $100 buys you</h2>
+      <p class="note">The payoff order is worth real money, but the size of the payment is worth more. Here is the same plan at different monthly budgets.</p>
+    </div>
+    <div class="card tablescroll">
+      <table class="ladder">
+        <thead>
+          <tr>
+            <th scope="col">Monthly budget</th>
+            <th scope="col">Debt-free</th>
+            <th scope="col">Months</th>
+            <th scope="col">Total interest</th>
+            <th scope="col">Interest saved</th>
+          </tr>
+        </thead>
+        <tbody id="ladder"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── SCHEDULE ──────────────────────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Step seven</p>
+      <h2>Month-by-month schedule</h2>
+      <p class="note">Green rows are the months a debt disappears.</p>
+    </div>
+    <div class="card">
+      <div class="tablescroll">
+        <table class="sched">
+          <thead>
+            <tr>
+              <th scope="col">Month</th>
+              <th scope="col">Paid</th>
+              <th scope="col">Interest</th>
+              <th scope="col">Principal</th>
+              <th scope="col">Balance left</th>
+              <th scope="col" style="text-align:left">Extra goes to</th>
+            </tr>
+          </thead>
+          <tbody id="sched"></tbody>
+        </table>
+      </div>
+      <div class="btn-row" style="margin-top:16px">
+        <button type="button" id="toggle-sched">Show all months</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PLAYBOOK ──────────────────────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Step eight</p>
+      <h2>Levers that beat the spreadsheet</h2>
+    </div>
+    <div class="plays">
+      <div class="play">
+        <h3>Cut the rate, not just the balance</h3>
+        <p>A 0% balance-transfer card or a credit-union consolidation loan can drop a 25% APR to single digits. That does more in one afternoon than a year of extra payments. Count the transfer fee — usually 3–5% — and make sure you can clear the balance before the promo rate expires.</p>
+      </div>
+      <div class="play">
+        <h3>Keep one month of expenses in cash</h3>
+        <p>Throwing literally every dollar at debt feels fastest, but a blown tyre puts it straight back on the card at 25%. A small buffer is not a detour — it's what keeps the plan from resetting.</p>
+      </div>
+      <div class="play">
+        <h3>Take the free money first</h3>
+        <p>If your employer matches retirement contributions, that match beats almost any interest rate you're paying. Capture it, then aim everything else at the debt.</p>
+      </div>
+      <div class="play">
+        <h3>Freeze the balances</h3>
+        <p>The schedule above assumes nothing new gets charged. One month of normal card spending can undo a quarter of progress. Move day-to-day spending to cash or debit until the cards are at zero.</p>
+      </div>
+      <div class="play">
+        <h3>Automate the payment, not the willpower</h3>
+        <p>Set the full budgeted amount to leave your account the day after payday. Whatever is left is what you have to live on — decisions made once beat decisions made monthly.</p>
+      </div>
+      <div class="play">
+        <h3>When to break the rule</h3>
+        <p>Avalanche is the cheapest order. If two rates are within a point or two of each other, clearing the smaller balance first costs you very little and gives you a win you can feel — and a plan you actually stick to beats an optimal one you abandon.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HANDOFF ───────────────────────────────────────────────────────── -->
+  <section>
+    <div class="sec-head">
+      <p class="eyebrow">Step nine</p>
+      <h2>Hand it back to Claude</h2>
+      <p class="note">Nothing you type here leaves your browser on its own — this page has no way to send it anywhere. To get analysis on your real figures, copy this snapshot and paste it into the chat. It carries your ledger, the computed plan, and your cash-flow settings.</p>
+    </div>
+    <div class="card">
+      <label for="payload" class="eyebrow" style="display:block;margin-bottom:10px">Snapshot — review before sending</label>
+      <textarea id="payload" readonly spellcheck="false" aria-label="Plan snapshot to copy"></textarea>
+      <div class="btn-row" style="margin-top:14px">
+        <button type="button" id="copy" class="btn-go">Copy snapshot</button>
+        <button type="button" id="download">Download as .md</button>
+        <span class="copy-state" id="copy-state" role="status"></span>
+      </div>
+      <p class="note" style="margin-top:14px">Names are yours to edit — if you'd rather not share which lender is which, rename the rows in the ledger to "Card A", "Card B" and so on before copying. The maths only uses the numbers.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p class="note">This is a calculator, not personalised financial advice. Figures are estimates: it assumes fixed APRs, fixed minimum payments, payments applied at month end after interest accrues, and no new borrowing. Check any promotional-rate expiry dates and prepayment penalties against your own loan documents before committing to a plan.</p>
+  </footer>
+
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const EXAMPLE = [
+    { name: "Store card",         balance: 1450,  apr: 28.99, min: 45,  due: 3  },
+    { name: "Visa — everyday",    balance: 6200,  apr: 24.49, min: 155, due: 12 },
+    { name: "Mastercard",         balance: 3800,  apr: 19.99, min: 95,  due: 18 },
+    { name: "Car loan",           balance: 11400, apr: 7.25,  min: 342, due: 5  },
+    { name: "Student loan",       balance: 18600, apr: 5.50,  min: 210, due: 22 }
+  ];
+  const STORE = "debt-planner-v1";
+  const MAXM = 600;
+
+  let debts = [];
+  let budget = 1300;
+  let schedExpanded = false;
+  let lastPlan = null, lastBase = null, lastTotals = null;
+  let calMonth = 1;                                  // 1-based index into plan.rows
+  let cash = { start: 0, paydays: [1, 15], paycheck: 0 };
+
+  /* ── formatting ─────────────────────────────────────────────────── */
+  const money = n => "$" + Math.round(n).toLocaleString("en-US");
+  const money2 = n => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const START = new Date();
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function labelFor(m) {                       // m = 1-based month index from now
+    const d = new Date(START.getFullYear(), START.getMonth() + m, 1);
+    return MONTHS[d.getMonth()] + " " + d.getFullYear();
+  }
+  function durationOf(m) {
+    const y = Math.floor(m / 12), r = m % 12;
+    if (m >= MAXM) return "50+ years";
+    if (!y) return r + (r === 1 ? " month" : " months");
+    if (!r) return y + (y === 1 ? " year" : " years");
+    return y + "y " + r + "m";
+  }
+
+  /* ── the engine ─────────────────────────────────────────────────── */
+  function simulate(list, monthlyBudget, strategy) {
+    const st = list.map((d, i) => ({
+      id: i, name: d.name, apr: d.apr, min: d.min,
+      bal: d.balance, interest: 0, payoffMonth: null
+    }));
+    const rows = [];
+    let totalInterest = 0, m = 0, capped = false;
+
+    const live = () => st.filter(d => d.bal > 0.005);
+
+    while (live().length && m < MAXM) {
+      m++;
+      let monthInterest = 0;
+      st.forEach(d => {
+        if (d.bal > 0.005) {
+          const i = d.bal * (d.apr / 100 / 12);
+          d.bal += i; d.interest += i; monthInterest += i;
+        }
+      });
+
+      let pool = monthlyBudget;
+      const active = live();
+      const pay = {};                                // per-debt payment this month
+      // 1. minimum on everything
+      active.forEach(d => {
+        const p = Math.max(0, Math.min(d.bal, d.min, pool));
+        pool -= p; d.bal -= p;
+        pay[d.id] = (pay[d.id] || 0) + p;
+      });
+      // 2. every remaining dollar to the target, cascading
+      const targets = active.slice().sort((a, b) =>
+        strategy === "snowball"
+          ? (a.bal - b.bal) || (b.apr - a.apr)
+          : (b.apr - a.apr) || (a.bal - b.bal)
+      );
+      let focus = targets.find(d => d.bal > 0.005);
+      for (const d of targets) {
+        if (pool <= 0.005) break;
+        const p = Math.min(d.bal, pool);
+        pool -= p; d.bal -= p;
+        pay[d.id] = (pay[d.id] || 0) + p;
+      }
+
+      const cleared = [];
+      st.forEach(d => {
+        if (d.bal <= 0.005 && d.payoffMonth === null) { d.bal = 0; d.payoffMonth = m; cleared.push(d.name); }
+      });
+
+      totalInterest += monthInterest;
+      const paid = monthlyBudget - pool;
+      const remaining = st.reduce((s, d) => s + d.bal, 0);
+      rows.push({
+        month: m, paid, interest: monthInterest,
+        principal: paid - monthInterest, remaining,
+        focus: focus ? focus.name : "—", cleared, payments: pay
+      });
+    }
+    if (m >= MAXM && live().length) capped = true;
+    return { months: m, rows, debts: st, totalInterest, capped };
+  }
+
+  /* ── ledger UI ──────────────────────────────────────────────────── */
+  const $ = id => document.getElementById(id);
+  const ledgerEl = $("ledger");
+
+  function renderLedger() {
+    ledgerEl.innerHTML = "";
+    debts.forEach((d, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td class="cell-name"><input type="text" class="c-name" data-i="' + i + '" data-f="name" value="' + esc(d.name) + '" aria-label="Debt name"></td>' +
+        '<td data-label="Balance"><input type="number" inputmode="decimal" min="0" step="50" data-i="' + i + '" data-f="balance" value="' + d.balance + '" aria-label="Balance"></td>' +
+        '<td data-label="APR %"><input type="number" inputmode="decimal" min="0" step="0.01" data-i="' + i + '" data-f="apr" value="' + d.apr + '" aria-label="APR percent"></td>' +
+        '<td data-label="Minimum"><input type="number" inputmode="decimal" min="0" step="5" data-i="' + i + '" data-f="min" value="' + d.min + '" aria-label="Minimum payment"></td>' +
+        '<td data-label="Due day"><input type="number" inputmode="numeric" min="1" max="31" step="1" data-i="' + i + '" data-f="due" value="' + (d.due || 1) + '" aria-label="Due day of month"></td>' +
+        '<td class="cell-act"><button type="button" class="btn-x" data-del="' + i + '" aria-label="Remove ' + esc(d.name) + '">✕</button></td>';
+      ledgerEl.appendChild(tr);
+    });
+  }
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  /* ── render everything downstream ───────────────────────────────── */
+  function render() {
+    const totalBal = debts.reduce((s, d) => s + d.balance, 0);
+    const totalMin = debts.reduce((s, d) => s + d.min, 0);
+    const wAvg = totalBal ? debts.reduce((s, d) => s + d.apr * d.balance, 0) / totalBal : 0;
+
+    $("t-bal").textContent = money(totalBal);
+    $("t-apr").textContent = wAvg.toFixed(2) + "%";
+    $("t-min").textContent = money(totalMin);
+
+    const alert = $("alert");
+    let effBudget = budget;
+    if (!debts.length) {
+      alert.textContent = "Add at least one debt to see a plan.";
+      $("extra-hint").textContent = "";
+      clearOutputs();
+      return;
+    }
+    if (budget < totalMin) {
+      alert.textContent = "Your budget of " + money(budget) + " is below the " + money(totalMin) +
+        " of minimums these debts require. The plan below uses " + money(totalMin) +
+        " — the shortfall is what to close first, by trimming spending, raising income, or calling lenders about hardship terms.";
+      effBudget = totalMin;
+    } else {
+      alert.textContent = "";
+    }
+    $("extra-hint").textContent = "Minimums total " + money(totalMin) + " · extra " + money(Math.max(0, effBudget - totalMin)) + "/mo";
+
+    const plan = simulate(debts, effBudget, "avalanche");
+    const base = simulate(debts, totalMin, "avalanche");
+    lastPlan = plan;
+
+    // tiles
+    $("v-date").textContent = plan.capped ? "50+ yrs" : labelFor(plan.months);
+    $("v-months").textContent = plan.capped ? "budget barely covers interest" : durationOf(plan.months) + " from now";
+    $("v-interest").textContent = money(plan.totalInterest);
+    const saved = base.totalInterest - plan.totalInterest;
+    $("v-saved").textContent = money(Math.max(0, saved));
+    const faster = base.months - plan.months;
+    $("v-faster").textContent = base.capped
+      ? "and decades sooner"
+      : (faster > 0 ? durationOf(faster) + " sooner" : "same timeline");
+    $("v-total").textContent = money(totalBal + plan.totalInterest);
+    $("v-principal").textContent = money(totalBal) + " principal + interest";
+
+    renderSteps(plan);
+    renderCalendar(plan);
+    renderLadder(totalMin, effBudget);
+    renderSched(plan);
+    drawChart(plan, base);
+    lastBase = base;
+    lastTotals = { totalBal, totalMin, wAvg, effBudget };
+    renderHandoff(plan, base, lastTotals);
+  }
+
+  // cash-flow settings feed the snapshot too, but don't change the payoff maths
+  function refreshCash() {
+    if (!lastPlan) return;
+    renderCalendar(lastPlan);
+    renderHandoff(lastPlan, lastBase, lastTotals);
+  }
+
+  function clearOutputs() {
+    ["v-date","v-interest","v-saved","v-total"].forEach(id => $(id).textContent = "—");
+    ["v-months","v-faster","v-principal"].forEach(id => $(id).textContent = "—");
+    $("steps").innerHTML = ""; $("ladder").innerHTML = ""; $("sched").innerHTML = "";
+    $("chart").innerHTML = ""; $("cal-grid").innerHTML = ""; $("cash").innerHTML = "";
+    $("cal-sum").innerHTML = ""; $("cash-note").textContent = ""; $("cal-title").textContent = "—";
+    $("payload").value = "";
+  }
+
+  function renderSteps(plan) {
+    const order = plan.debts.slice().sort((a, b) => (b.apr - a.apr) || (a.bal - b.bal));
+    $("steps").innerHTML = order.map((d, i) => {
+      const paidOff = d.payoffMonth
+        ? labelFor(d.payoffMonth)
+        : "beyond 50 yrs";
+      const orig = debts[d.id] ? debts[d.id].balance : 0;
+      return '<div class="step">' +
+        '<span class="rank num">' + (i + 1) + '</span>' +
+        '<span class="nm">' + esc(d.name) + '<span class="rate-pill">' + d.apr.toFixed(2) + '% APR</span></span>' +
+        '<span class="when">cleared ' + paidOff + '</span>' +
+        '<span class="meta">' + money(orig) + ' balance · ' + money(d.interest) + ' interest over its life · ' + money(d.min) + '/mo minimum</span>' +
+      '</div>';
+    }).join("");
+  }
+
+  function renderLadder(totalMin, effBudget) {
+    const steps = [0, 100, 250, 500].map(x => effBudget + x);
+    if (!steps.includes(totalMin)) steps.unshift(totalMin);
+    const baseInterest = simulate(debts, totalMin, "avalanche").totalInterest;
+    $("ladder").innerHTML = steps.map(b => {
+      const r = simulate(debts, b, "avalanche");
+      const save = baseInterest - r.totalInterest;
+      const isNow = Math.abs(b - effBudget) < 0.5;
+      return '<tr class="' + (isNow ? "current" : "") + '">' +
+        '<td>' + money(b) + (b === totalMin ? " (minimums)" : "") + (isNow ? " ← your plan" : "") + '</td>' +
+        '<td>' + (r.capped ? "50+ yrs" : labelFor(r.months)) + '</td>' +
+        '<td>' + (r.capped ? "600+" : r.months) + '</td>' +
+        '<td>' + money(r.totalInterest) + '</td>' +
+        '<td class="save">' + (save > 0.5 ? money(save) : "—") + '</td>' +
+      '</tr>';
+    }).join("");
+  }
+
+  function renderSched(plan) {
+    const rows = schedExpanded ? plan.rows : plan.rows.slice(0, 12);
+    $("sched").innerHTML = rows.map(r =>
+      '<tr class="' + (r.cleared.length ? "milestone" : "") + '">' +
+        '<td>' + labelFor(r.month) + '</td>' +
+        '<td>' + money(r.paid) + '</td>' +
+        '<td>' + money(r.interest) + '</td>' +
+        '<td>' + money(r.principal) + '</td>' +
+        '<td>' + money(r.remaining) + '</td>' +
+        '<td class="focus-cell" style="text-align:left">' + esc(r.focus) +
+          (r.cleared.length ? '<span class="clear"> — ' + esc(r.cleared.join(", ")) + ' cleared</span>' : '') +
+        '</td>' +
+      '</tr>'
+    ).join("");
+    $("toggle-sched").textContent = schedExpanded
+      ? "Show first year only"
+      : "Show all " + plan.rows.length + " months";
+    $("toggle-sched").style.display = plan.rows.length > 12 ? "" : "none";
+  }
+
+  /* ── handoff snapshot ───────────────────────────────────────────── */
+  function buildSnapshot(plan, base, totals) {
+    const { totalBal, totalMin, wAvg, effBudget } = totals;
+    const order = plan.debts.slice().sort((a, b) => (b.apr - a.apr) || (a.bal - b.bal));
+    const stamp = new Date().toISOString().slice(0, 10);
+
+    const L = [];
+    L.push("# Debt payoff snapshot — " + stamp);
+    L.push("");
+    L.push("## Ledger");
+    L.push("| Debt | Balance | APR | Minimum | Due day |");
+    L.push("|---|---|---|---|---|");
+    debts.forEach(d => L.push("| " + d.name + " | " + money(d.balance) + " | " + d.apr.toFixed(2) +
+      "% | " + money(d.min) + " | " + ordinal(d.due || 1) + " |"));
+    L.push("");
+    L.push("- Total balance: " + money(totalBal));
+    L.push("- Weighted average APR: " + wAvg.toFixed(2) + "%");
+    L.push("- Minimums: " + money(totalMin) + "/mo");
+    L.push("- Monthly budget: " + money(effBudget) + " (extra " + money(Math.max(0, effBudget - totalMin)) + "/mo)");
+    if (budget < totalMin) L.push("- NOTE: entered budget " + money(budget) + " is below the minimums; plan computed at " + money(totalMin) + ".");
+    L.push("");
+    L.push("## Plan — avalanche (highest APR first)");
+    L.push("- Debt-free: " + (plan.capped ? "not within 50 years" : labelFor(plan.months) + " (" + plan.months + " months)"));
+    L.push("- Total interest: " + money(plan.totalInterest));
+    L.push("- Total repaid: " + money(totalBal + plan.totalInterest));
+    L.push("- Vs minimums only (" + (base.capped ? "50+ yrs" : base.months + " months") + ", " +
+      money(base.totalInterest) + " interest): saves " + money(Math.max(0, base.totalInterest - plan.totalInterest)) +
+      (base.capped ? "" : " and " + Math.max(0, base.months - plan.months) + " months"));
+    L.push("");
+    L.push("### Payoff order");
+    order.forEach((d, i) => L.push((i + 1) + ". " + d.name + " — " + d.apr.toFixed(2) + "% APR, " +
+      money(debts[d.id] ? debts[d.id].balance : 0) + " balance, " +
+      money(d.interest) + " lifetime interest, cleared " +
+      (d.payoffMonth ? labelFor(d.payoffMonth) : "beyond 50 yrs")));
+    L.push("");
+    L.push("## Cash flow");
+    const { ev } = monthEvents(plan, 1);
+    const outs = ev.filter(e => e.kind === "out");
+    L.push("- Month 1 due: " + money(outs.reduce((s, e) => s + e.amt, 0)) +
+      (outs.length ? ", all of it needed by the " + ordinal(outs[outs.length - 1].day) : ""));
+    L.push("- Starting balance: " + money(cash.start));
+    L.push("- Paydays: " + cash.paydays.map(ordinal).join(", ") +
+      (cash.paycheck > 0 ? " · " + money(cash.paycheck) + " per payday" : " · take-home not entered"));
+    L.push("");
+    L.push("## Machine-readable");
+    L.push("```json");
+    L.push(JSON.stringify({
+      captured: stamp,
+      debts: debts.map(d => ({ name: d.name, balance: d.balance, apr: d.apr, min: d.min, due: d.due || 1 })),
+      budget: effBudget,
+      cash: { start: cash.start, paydays: cash.paydays, paycheck: cash.paycheck },
+      result: {
+        months: plan.capped ? null : plan.months,
+        totalInterest: +plan.totalInterest.toFixed(2),
+        baselineMonths: base.capped ? null : base.months,
+        baselineInterest: +base.totalInterest.toFixed(2)
+      }
+    }, null, 1));
+    L.push("```");
+    return L.join("\n");
+  }
+
+  function renderHandoff(plan, base, totals) {
+    $("payload").value = buildSnapshot(plan, base, totals);
+  }
+
+  // `claude` only exists when the page is opened as a published Artifact;
+  // as a plain local file it is absent and the save button stays hidden.
+  async function getDownloads() {
+    try {
+      if (typeof claude === "undefined" || !claude || typeof claude.use !== "function") return null;
+      return await claude.use("downloads");
+    } catch (e) { return null; }
+  }
+
+  function flash(msg, ok) {
+    const el = $("copy-state");
+    el.textContent = msg;
+    el.className = "copy-state" + (ok ? "" : " fail");
+    clearTimeout(flash.t);
+    flash.t = setTimeout(() => { el.textContent = ""; }, 4000);
+  }
+
+  /* ── payment calendar ───────────────────────────────────────────── */
+  const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  // Builds the month's events: payments out (from the real schedule) and pay
+  // cheques in. Due days past the end of a short month fall on the last day,
+  // which is how lenders treat them.
+  function monthEvents(plan, idx) {
+    const row = plan.rows[idx - 1];
+    const d0 = new Date(START.getFullYear(), START.getMonth() + idx, 1);
+    const dim = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate();
+    const ev = [];
+    debts.forEach((d, i) => {
+      const amt = (row.payments && row.payments[i]) || 0;
+      if (amt > 0.005) ev.push({ day: Math.min(Math.max(1, d.due || 1), dim), kind: "out", name: d.name, amt });
+    });
+    if (cash.paycheck > 0) {
+      cash.paydays.forEach(p => {
+        ev.push({ day: Math.min(Math.max(1, p), dim), kind: "in", name: "Payday", amt: cash.paycheck });
+      });
+    }
+    // income lands before the day's debits
+    ev.sort((a, b) => a.day - b.day || (a.kind === "in" ? -1 : 1));
+    return { ev, dim, firstDow: d0.getDay(), date: d0, row };
+  }
+
+  function renderCalendar(plan) {
+    const total = plan.rows.length;
+    calMonth = Math.min(Math.max(1, calMonth), total);
+    const { ev, dim, firstDow, date } = monthEvents(plan, calMonth);
+
+    $("cal-title").textContent = MONTHS[date.getMonth()] + " " + date.getFullYear();
+    $("cash-month").textContent = MONTHS[date.getMonth()] + " " + date.getFullYear();
+    $("cal-prev").disabled = calMonth <= 1;
+    $("cal-next").disabled = calMonth >= total;
+
+    // grid
+    let cells = DOW.map(d => '<div class="cal-dow">' + d + "</div>").join("");
+    for (let i = 0; i < firstDow; i++) cells += '<div class="cal-cell blank"></div>';
+    for (let day = 1; day <= dim; day++) {
+      const on = ev.filter(e => e.day === day);
+      cells += '<div class="cal-cell' + (on.length ? " due" : "") + '">' +
+        '<span class="cal-day">' + day + "</span>" +
+        on.map(e => '<span class="chip ' + e.kind + '" title="' + esc(e.name) + " " + money(e.amt) + '">' +
+          (e.kind === "in" ? "+" : "−") + money(e.amt).slice(1) + " " + esc(shortName(e.name)) + "</span>").join("") +
+        "</div>";
+    }
+    const trail = (firstDow + dim) % 7;
+    if (trail) for (let i = trail; i < 7; i++) cells += '<div class="cal-cell blank"></div>';
+    $("cal-grid").innerHTML = cells;
+
+    // running totals
+    const outs = ev.filter(e => e.kind === "out");
+    const totalOut = outs.reduce((s, e) => s + e.amt, 0);
+    const biggest = outs.reduce((a, e) => (e.amt > a.amt ? e : a), { amt: 0, day: 0 });
+
+    let bal = cash.start, minBal = cash.start, minDay = 1, cum = 0, short = false;
+    const lines = ev.map(e => {
+      if (e.kind === "in") bal += e.amt; else { bal -= e.amt; cum += e.amt; }
+      if (bal < minBal) { minBal = bal; minDay = e.day; }
+      if (bal < -0.005) short = true;
+      return { ...e, cum, bal };
+    });
+
+    const live = cash.paycheck > 0;
+    $("th-bal").style.display = live ? "" : "none";
+    $("cash").innerHTML = lines.map(l =>
+      '<tr class="' + (live && l.bal < -0.005 ? "short" : "") + '">' +
+        "<td>" + ordinal(l.day) + "</td>" +
+        '<td class="what">' + (l.kind === "in" ? "Payday" : esc(l.name) + " payment") + "</td>" +
+        "<td>" + (l.kind === "in" ? "+" : "−") + money(l.amt) + "</td>" +
+        "<td>" + (l.kind === "out" ? money(l.cum) : "—") + "</td>" +
+        (live ? '<td class="' + (l.bal < -0.005 ? "neg" : "") + '">' + (l.bal < 0 ? "−" : "") + money(Math.abs(l.bal)) + "</td>" : "<td style='display:none'></td>") +
+      "</tr>"
+    ).join("");
+
+    $("cal-sum").innerHTML =
+      "<div>Due this month<b>" + money(totalOut) + "</b></div>" +
+      (biggest.amt > 0 ? "<div>Largest single payment<b>" + money(biggest.amt) + " on the " + ordinal(biggest.day) + "</b></div>" : "") +
+      (live ? "<div>Lowest balance<b class='" + (minBal < 0 ? "warn" : "") + "'>" +
+        (minBal < 0 ? "−" : "") + money(Math.abs(minBal)) + " on the " + ordinal(minDay) + "</b></div>" : "");
+
+    const lastOut = outs.length ? outs[outs.length - 1] : null;
+    $("cash-note").innerHTML = !lastOut
+      ? "No payments fall in this month."
+      : (live
+          ? (short
+              ? "<strong>You come up short this month.</strong> On the " + ordinal(minDay) + " the projected balance goes to " +
+                (minBal < 0 ? "−" : "") + money(Math.abs(minBal)) +
+                ". Either move a due date later in the cycle, or carry " + money(Math.ceil(-minBal / 50) * 50) + " more into the month as a starting buffer."
+              : "You stay solvent all month. The tightest point is the " + ordinal(minDay) + ", with " + money(minBal) + " left in the account.")
+          : "You need the full " + money(totalOut) + " available by the " + ordinal(lastOut.day) +
+            ", and " + money(lines.filter(l => l.kind === "out")[0].cum) + " of it as early as the " + ordinal(outs[0].day) +
+            ". Enter your paydays and take-home above to check the balance against your income.");
+  }
+
+  const shortName = n => (n.length > 11 ? n.slice(0, 10).trim() + "…" : n);
+  function ordinal(n) {
+    const s = ["th","st","nd","rd"], v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  /* ── chart ──────────────────────────────────────────────────────── */
+  let chartGeom = null;
+
+  function drawChart(plan, base) {
+    const host = $("chart");
+    const w = Math.max(320, host.clientWidth || 880);
+    const h = w < 520 ? 240 : 300;
+    const pad = { t: 16, r: 16, b: 34, l: 56 };
+    const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
+
+    const planSeries = [debts.reduce((s, d) => s + d.balance, 0), ...plan.rows.map(r => r.remaining)];
+    const baseSeries = [debts.reduce((s, d) => s + d.balance, 0), ...base.rows.map(r => r.remaining)];
+    const nMax = Math.max(planSeries.length, baseSeries.length) - 1;
+    const yMax = Math.max(...planSeries, ...baseSeries, 1);
+
+    const X = m => pad.l + (nMax ? (m / nMax) * iw : 0);
+    const Y = v => pad.t + ih - (v / yMax) * ih;
+
+    const path = arr => arr.map((v, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join(" ");
+
+    // ticks
+    const yTicks = 4, xYears = Math.max(1, Math.ceil(nMax / 12));
+    const yStep = niceStep(yMax / yTicks);
+    let grid = "", yLab = "";
+    for (let v = 0; v <= yMax + 1; v += yStep) {
+      grid += '<line x1="' + pad.l + '" y1="' + Y(v).toFixed(1) + '" x2="' + (pad.l + iw) + '" y2="' + Y(v).toFixed(1) + '" stroke="var(--rule-soft)" stroke-width="1"/>';
+      yLab += '<text x="' + (pad.l - 10) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end" font-size="11" font-family="var(--mono)" fill="var(--ink-3)">' + kfmt(v) + '</text>';
+    }
+    let xLab = "";
+    const yearStep = xYears > 12 ? Math.ceil(xYears / 6) : (xYears > 6 ? 2 : 1);
+    for (let y = 0; y <= xYears; y += yearStep) {
+      const m = y * 12;
+      if (m > nMax) break;                       // never label a year the data doesn't reach
+      xLab += '<text x="' + X(m).toFixed(1) + '" y="' + (pad.t + ih + 20) + '" text-anchor="middle" font-size="11" font-family="var(--mono)" fill="var(--ink-3)">' + (y === 0 ? "now" : "yr " + y) + '</text>';
+    }
+
+    const endX = X(planSeries.length - 1), endY = Y(planSeries[planSeries.length - 1]);
+    // direct labels at 55% along each series
+    const pi = Math.round((planSeries.length - 1) * 0.5);
+    const bi = Math.round((baseSeries.length - 1) * 0.5);
+
+    host.innerHTML =
+      '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" role="img" ' +
+      'aria-label="Total debt balance over time: minimum payments only versus the avalanche plan.">' +
+        grid + yLab + xLab +
+        '<line x1="' + pad.l + '" y1="' + (pad.t + ih) + '" x2="' + (pad.l + iw) + '" y2="' + (pad.t + ih) + '" stroke="var(--rule)" stroke-width="1"/>' +
+        '<path d="' + path(baseSeries) + '" fill="none" stroke="var(--red)" stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round"/>' +
+        '<path d="' + path(planSeries) + '" fill="none" stroke="var(--green)" stroke-width="2" stroke-linejoin="round"/>' +
+        '<circle cx="' + endX.toFixed(1) + '" cy="' + endY.toFixed(1) + '" r="4.5" fill="var(--green)" stroke="var(--card)" stroke-width="2"/>' +
+        '<text x="' + X(bi).toFixed(1) + '" y="' + (Y(baseSeries[bi]) - 10).toFixed(1) + '" font-size="11.5" font-family="var(--sans)" fill="var(--red)">Minimums only</text>' +
+        '<text x="' + X(pi).toFixed(1) + '" y="' + (Y(planSeries[pi]) - 10).toFixed(1) + '" font-size="11.5" font-family="var(--sans)" fill="var(--green)">Your plan</text>' +
+        '<line id="cross" x1="0" y1="' + pad.t + '" x2="0" y2="' + (pad.t + ih) + '" stroke="var(--ink-3)" stroke-width="1" opacity="0"/>' +
+        '<circle id="d-base" r="4" fill="var(--red)" stroke="var(--card)" stroke-width="2" opacity="0"/>' +
+        '<circle id="d-plan" r="4" fill="var(--green)" stroke="var(--card)" stroke-width="2" opacity="0"/>' +
+      '</svg>';
+
+    chartGeom = { w, h, pad, iw, ih, nMax, X, Y, planSeries, baseSeries };
+  }
+
+  function niceStep(raw) {
+    const p = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+    const n = raw / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+  }
+  const kfmt = v => v >= 1000 ? "$" + Math.round(v / 1000) + "k" : "$" + Math.round(v);
+
+  /* ── hover layer ────────────────────────────────────────────────── */
+  const wrapEl = $("chartwrap"), tipEl = $("tip");
+  function moveTip(ev) {
+    if (!chartGeom) return;
+    const g = chartGeom;
+    const rect = wrapEl.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    if (x < g.pad.l - 8 || x > g.pad.l + g.iw + 8) return hideTip();
+    const m = Math.round(Math.max(0, Math.min(g.nMax, ((x - g.pad.l) / g.iw) * g.nMax)));
+
+    const pv = m < g.planSeries.length ? g.planSeries[m] : 0;
+    const bv = m < g.baseSeries.length ? g.baseSeries[m] : 0;
+    const cross = document.getElementById("cross"),
+          dp = document.getElementById("d-plan"),
+          db = document.getElementById("d-base");
+    if (!cross) return;
+    const cx = g.X(m);
+    cross.setAttribute("x1", cx); cross.setAttribute("x2", cx); cross.setAttribute("opacity", "0.45");
+    dp.setAttribute("cx", cx); dp.setAttribute("cy", g.Y(pv)); dp.setAttribute("opacity", "1");
+    db.setAttribute("cx", cx); db.setAttribute("cy", g.Y(bv)); db.setAttribute("opacity", "1");
+
+    tipEl.innerHTML =
+      '<div class="t-m">' + (m === 0 ? "Today" : labelFor(m)) + '</div>' +
+      '<div class="t-r"><span style="color:var(--green)">Your plan</span><span>' + money(pv) + '</span></div>' +
+      '<div class="t-r"><span style="color:var(--red)">Minimums</span><span>' + money(bv) + '</span></div>';
+    tipEl.classList.add("on");
+    const tw = tipEl.offsetWidth;
+    let left = cx + 14;
+    if (left + tw > g.w) left = cx - tw - 14;
+    tipEl.style.left = Math.max(0, left) + "px";
+    tipEl.style.top = Math.max(0, g.Y(Math.max(pv, bv)) - 10) + "px";
+  }
+  function hideTip() {
+    tipEl.classList.remove("on");
+    ["cross", "d-plan", "d-base"].forEach(id => {
+      const e = document.getElementById(id);
+      if (e) e.setAttribute("opacity", "0");
+    });
+  }
+  wrapEl.addEventListener("pointermove", moveTip);
+  wrapEl.addEventListener("pointerleave", hideTip);
+
+  /* ── wiring ─────────────────────────────────────────────────────── */
+  ledgerEl.addEventListener("input", e => {
+    const t = e.target;
+    if (!t.dataset.f) return;
+    const i = +t.dataset.i, f = t.dataset.f;
+    debts[i][f] = f === "name" ? t.value
+      : f === "due" ? Math.min(31, Math.max(1, Math.round(+t.value) || 1))
+      : Math.max(0, +t.value || 0);
+    save(); render();
+  });
+  ledgerEl.addEventListener("click", e => {
+    const b = e.target.closest("[data-del]");
+    if (!b) return;
+    debts.splice(+b.dataset.del, 1);
+    save(); renderLedger(); render();
+  });
+  $("budget").addEventListener("input", e => {
+    budget = Math.max(0, +e.target.value || 0);
+    save(); render();
+  });
+  $("add").addEventListener("click", () => {
+    debts.push({ name: "New debt", balance: 1000, apr: 19.99, min: 30, due: 1 });
+    save(); renderLedger(); render();
+  });
+  $("reset").addEventListener("click", () => {
+    debts = EXAMPLE.map(d => ({ ...d }));
+    budget = 1300;
+    cash = { start: 0, paydays: [1, 15], paycheck: 0 };
+    calMonth = 1;
+    $("budget").value = budget;
+    $("startbal").value = 0; $("paydays").value = "1, 15"; $("paycheck").value = 0;
+    save(); renderLedger(); render();
+  });
+
+  $("cal-prev").addEventListener("click", () => { calMonth--; if (lastPlan) renderCalendar(lastPlan); });
+  $("cal-next").addEventListener("click", () => { calMonth++; if (lastPlan) renderCalendar(lastPlan); });
+
+  $("startbal").addEventListener("input", e => {
+    cash.start = Math.max(0, +e.target.value || 0);
+    save(); refreshCash();
+  });
+  $("paycheck").addEventListener("input", e => {
+    cash.paycheck = Math.max(0, +e.target.value || 0);
+    save(); refreshCash();
+  });
+  $("paydays").addEventListener("input", e => {
+    const days = e.target.value.split(",")
+      .map(s => Math.round(parseFloat(s)))
+      .filter(n => Number.isFinite(n) && n >= 1 && n <= 31);
+    cash.paydays = days.length ? days : [1];
+    save(); refreshCash();
+  });
+  $("toggle-sched").addEventListener("click", () => {
+    schedExpanded = !schedExpanded;
+    if (lastPlan) renderSched(lastPlan);
+  });
+
+  $("copy").addEventListener("click", async () => {
+    const text = $("payload").value;
+    if (!text) return flash("Nothing to copy — add a debt first.", false);
+    try {
+      await navigator.clipboard.writeText(text);
+      flash("Copied. Paste it into the chat.", true);
+    } catch (e) {
+      // clipboard permission is commonly withheld in a sandboxed frame
+      const ta = $("payload");
+      ta.focus(); ta.select();
+      flash("Selected — press " + (/Mac|iP(hone|ad)/.test(navigator.platform || "") ? "⌘C" : "Ctrl+C") + " to copy.", true);
+    }
+  });
+
+  $("download").addEventListener("click", async () => {
+    const dl = await getDownloads();
+    if (!dl) return flash("Saving isn't available here — use Copy instead.", false);
+    try {
+      await dl.save({ filename: "debt-payoff-snapshot.md", data: $("payload").value });
+      flash("Saved.", true);
+    } catch (err) {
+      const code = err && err.code;
+      if (code === "declined") return;                       // viewer said no; never retry
+      if (code === "rate_limited") return flash("Too many prompts — try again in a moment.", false);
+      flash("Couldn't save. Use Copy instead.", false);
+    }
+  });
+
+  getDownloads().then(dl => { if (!dl) $("download").style.display = "none"; });
+
+  let rt;
+  window.addEventListener("resize", () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { if (lastPlan) render(); }, 150);
+  });
+
+  /* ── persistence ────────────────────────────────────────────────── */
+  function save() {
+    try { localStorage.setItem(STORE, JSON.stringify({ debts, budget, cash })); } catch (e) { /* sandboxed */ }
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE);
+      if (!raw) return false;
+      const o = JSON.parse(raw);
+      if (!o || !Array.isArray(o.debts) || !o.debts.length) return false;
+      // ledgers saved before due dates existed get sensible defaults
+      debts = o.debts.map(d => ({ ...d, due: Math.min(31, Math.max(1, Math.round(d.due) || 1)) }));
+      budget = +o.budget || 0;
+      if (o.cash) {
+        cash.start = +o.cash.start || 0;
+        cash.paycheck = +o.cash.paycheck || 0;
+        if (Array.isArray(o.cash.paydays) && o.cash.paydays.length) cash.paydays = o.cash.paydays;
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+
+  if (!load()) debts = EXAMPLE.map(d => ({ ...d }));
+  $("budget").value = budget;
+  $("startbal").value = cash.start;
+  $("paycheck").value = cash.paycheck;
+  $("paydays").value = cash.paydays.join(", ");
+  renderLedger();
+  render();
+})();
+</script>
+</body>
+</html>
